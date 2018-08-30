@@ -37,20 +37,19 @@ from nets.vgg16 import vgg16
 from nets.resnet_v1 import resnetv1
 from layer_utils.proposal_layer_tf import bbox_transform_inv_tf, clip_boxes_tf
 
-import datasets.classes
 
+CLASSES = ('__background__', 'corrosion', 'cable_dangle', 'paint_peel', 'rf_', 'rru_', 'mw_', 'aol', 'platform_mesh', 'antenna_boom', 'lightning_rod')
 
-CLASSES = ()
-
-
-NETS = {'vgg16': ('vgg16_faster_rcnn_iter_70000.ckpt',),
+NETS = {'vgg16': ('vgg16_faster_rcnn_iter_32000.ckpt',),
         'res101': ('res101_faster_rcnn_iter_110000.ckpt',
                    'res101_faster_rcnn_iter_1190000.ckpt',)}
 DATASETS = {'pascal_voc': ('voc_2007_trainval',),
             'pascal_voc_0712': ('voc_2007_trainval+voc_2012_trainval',),
-            'coco': ('coco_2014_train+coco_2014_valminusminival',)}
+            'horus': ('horus_trainval',)}
 
-CONF_THRESH = 0.8
+NUM_CLASSES = len(CLASSES)
+
+CONF_THRESH = 0.6
 NMS_THRESH = 0.3
 
 
@@ -111,7 +110,6 @@ def demo(sess, net, image_name):
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
         vis_detections(im, cls, dets, thresh=CONF_THRESH)
-
 
 def postprocess(rois, bbox_pred, scores, im_info):
     # Post processing
@@ -191,7 +189,7 @@ if __name__ == '__main__':
 
     # model path
     tfmodel = os.path.join('output', demonet, DATASETS[dataset][0], 'default',
-                           NETS[demonet][int('coco' in dataset)])
+                           NETS[demonet][0])
 
     if not os.path.isfile(tfmodel + '.meta'):
         raise IOError(('{:s} not found.\nDid you download the proper networks from '
@@ -212,22 +210,16 @@ if __name__ == '__main__':
     else:
         raise NotImplementedError
 
-    raw_image = tf.placeholder(tf.uint8, shape=[None, None, 3])
-    image, im_info = preprocess(raw_image)
+    # raw_image = tf.placeholder(tf.uint8, shape=[None, None, 3])
+    # image, im_info = preprocess(raw_image)
 
-    # Set the right classes for visualization
-    if 'coco' in dataset:
-        CLASSES = datasets.classes.MS_COCO
-        net.create_architecture(sess, "TEST", 81,
-                                tag='default', anchor_scales=[4, 8, 16, 32],
-                                image=image, im_info=im_info)
-    elif 'pascal_voc' in dataset:
-        CLASSES = datasets.classes.PASCAL_VOC
-        net.create_architecture(sess, "TEST", 21,
-                                tag='default', anchor_scales=[8, 16, 32],
-                                image=image, im_info=im_info)
-    else:
-        raise NotImplementedError
+    
+    im_blob = tf.placeholder(tf.float32, shape=[None, None, 3])[tf.newaxis]
+    # im_blob, im_info = preprocess(im_blob)
+    im_info = tf.placeholder(tf.float32, shape=[3])[np.newaxis]
+
+    net.create_architecture(sess, "TEST", NUM_CLASSES, tag='default', anchor_scales=[8, 16, 32, 64], anchor_ratios=[0.25, 0.5, 1, 2, 4], image=im_blob, im_info=im_info)
+
     saver = tf.train.Saver()
     saver.restore(sess, tfmodel)
 
@@ -243,18 +235,33 @@ if __name__ == '__main__':
     # plt.show()
 
     # export the model to make it loadable with TF serving
-    export_path = 'tf_serving_export_{}_{}_v2'.format(demonet, dataset)
+    export_path = 'frozen_model_{}_{}'.format(demonet, dataset)
     print('Exporting trained model to', export_path)
     builder = saved_model_builder.SavedModelBuilder(export_path)
 
     # Build the signature_def_map.
-    tensor_info_img = utils.build_tensor_info(raw_image)
+    # tensor_info_img = utils.build_tensor_info(raw_image)
+
+    tensor_info_im_blob = utils.build_tensor_info(im_blob)
+    tensor_info_im_info = utils.build_tensor_info(im_info)
+
     tensor_info_cls = utils.build_tensor_info(net._predictions['cls_prob'])
     tensor_info_bbox = utils.build_tensor_info(net._predictions['bbox_pred'])
     tensor_info_rois = utils.build_tensor_info(net._predictions['rois'])
-
+    
+    '''
     prediction_signature = signature_def_utils.build_signature_def(
         inputs={'image': tensor_info_img},
+        outputs={'cls_prob': tensor_info_cls,
+                 'bbox_pred': tensor_info_bbox,
+                 'rois': tensor_info_rois,
+                 },
+        method_name=signature_constants.PREDICT_METHOD_NAME)
+    '''
+    
+    prediction_signature = signature_def_utils.build_signature_def(
+        inputs={'im_blob': tensor_info_im_blob,
+                'im_info': tensor_info_im_info},
         outputs={'cls_prob': tensor_info_cls,
                  'bbox_pred': tensor_info_bbox,
                  'rois': tensor_info_rois,
@@ -271,8 +278,19 @@ if __name__ == '__main__':
     tensor_info_fin_score = utils.build_tensor_info(fin_scores)
     tensor_info_fin_bbox = utils.build_tensor_info(fin_bbox)
 
+    '''
     prediction_post_signature = signature_def_utils.build_signature_def(
         inputs={'image': tensor_info_img},
+        outputs={'fin_cls': tensor_info_fin_cls,
+                 'fin_score': tensor_info_fin_score,
+                 'fin_bbox': tensor_info_fin_bbox,
+                 },
+        method_name=signature_constants.PREDICT_METHOD_NAME)
+    '''
+
+    prediction_post_signature = signature_def_utils.build_signature_def(
+        inputs={'im_blob': tensor_info_im_blob,
+                'im_info': tensor_info_im_info},
         outputs={'fin_cls': tensor_info_fin_cls,
                  'fin_score': tensor_info_fin_score,
                  'fin_bbox': tensor_info_fin_bbox,

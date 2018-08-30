@@ -13,6 +13,8 @@ __C = edict()
 #   from fast_rcnn_config import cfg
 cfg = __C
 
+__C.CLASSES = ('__background__', 'corrosion', 'cable_dangle', 'paint_peel', 'rf_', 'rru_', 'mw_', 'aol','platform_mesh', 'antenna_boom', 'lightning_rod')
+
 #
 # Training options
 #
@@ -60,10 +62,10 @@ __C.TRAIN.SUMMARY_INTERVAL = 180
 
 # Scale to use during training (can NOT list multiple scales)
 # The scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
+__C.TRAIN.SCALES = (1536,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
+__C.TRAIN.MAX_SIZE = 2880
 
 # Images to use per minibatch
 __C.TRAIN.IMS_PER_BATCH = 2
@@ -158,10 +160,10 @@ __C.TEST = edict()
 
 # Scale to use during testing (can NOT list multiple scales)
 # The scale is the pixel size of an image's shortest side
-__C.TEST.SCALES = (600,)
+__C.TEST.SCALES = (1536,)
 
 # Max pixel size of the longest side of a scaled input image
-__C.TEST.MAX_SIZE = 1000
+__C.TEST.MAX_SIZE = 2880
 
 # Overlap threshold used for non-maximum suppression (suppress boxes with
 # IoU >= this threshold)
@@ -264,10 +266,10 @@ __C.POOLING_MODE = 'crop'
 __C.POOLING_SIZE = 7
 
 # Anchor scales for RPN
-__C.ANCHOR_SCALES = [8,16,32]
+__C.ANCHOR_SCALES = [8,16,32,64]
 
 # Anchor ratios for RPN
-__C.ANCHOR_RATIOS = [0.5,1,2]
+__C.ANCHOR_RATIOS = [0.25,0.5,1,2,4]
 
 
 def get_output_dir(imdb, weights_filename):

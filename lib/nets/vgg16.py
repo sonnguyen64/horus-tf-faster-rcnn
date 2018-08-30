@@ -48,7 +48,7 @@ class vgg16(Network):
       self._act_summaries.append(net)
       self._layers['head'] = net
       # build the anchors for the image
-      self._anchor_component()
+      self._anchor_component_tf()
 
       # rpn
       rpn = slim.conv2d(net, 512, [3, 3], trainable=is_training, weights_initializer=initializer, scope="rpn_conv/3x3")
@@ -64,14 +64,14 @@ class vgg16(Network):
                                   weights_initializer=initializer,
                                   padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
       if is_training:
-        rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+        rois, roi_scores = self._proposal_layer_tf(rpn_cls_prob, rpn_bbox_pred, "rois")
         rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
         # Try to have a determinestic order for the computing graph, for reproducibility
         with tf.control_dependencies([rpn_labels]):
           rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
       else:
         if cfg.TEST.MODE == 'nms':
-          rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+          rois, _ = self._proposal_layer_tf(rpn_cls_prob, rpn_bbox_pred, "rois")
         elif cfg.TEST.MODE == 'top':
           rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
         else:

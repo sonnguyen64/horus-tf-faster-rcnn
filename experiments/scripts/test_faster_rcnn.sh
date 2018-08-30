@@ -8,10 +8,12 @@ export PYTHONUNBUFFERED="True"
 GPU_ID=$1
 DATASET=$2
 NET=$3
+CONF_THRESH=$4
+IOU_THRESH=$5
 
 array=( $@ )
 len=${#array[@]}
-EXTRA_ARGS=${array[@]:3:$len}
+EXTRA_ARGS=${array[@]:5:$len}
 EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 case ${DATASET} in
@@ -20,7 +22,7 @@ case ${DATASET} in
     TEST_IMDB="voc_2007_test"
     ITERS=70000
     ANCHORS="[8,16,32]"
-    RATIOS="[0.5,1,2]"
+    RATIOS="[0.25,0.5,1,2,4]"
     ;;
   pascal_voc_0712)
     TRAIN_IMDB="voc_2007_trainval+voc_2012_trainval"
@@ -35,6 +37,13 @@ case ${DATASET} in
     ITERS=490000
     ANCHORS="[4,8,16,32]"
     RATIOS="[0.5,1,2]"
+    ;;
+  horus)
+    TRAIN_IMDB="horus_trainval"
+    TEST_IMDB="horus_test"
+    ITERS=32000
+    ANCHORS="[8,16,32,64]"
+    RATIOS="[0.25,0.5,1,2,4]"
     ;;
   *)
     echo "No dataset given"
@@ -61,13 +70,19 @@ if [[ ! -z  ${EXTRA_ARGS_SLUG}  ]]; then
     --cfg experiments/cfgs/${NET}.yml \
     --tag ${EXTRA_ARGS_SLUG} \
     --net ${NET} \
-    --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} ${EXTRA_ARGS}
+    --conf ${CONF_THRESH} \
+    --iou ${IOU_THRESH} \
+    --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
+          ${EXTRA_ARGS}
 else
   CUDA_VISIBLE_DEVICES=${GPU_ID} time python ./tools/test_net.py \
     --imdb ${TEST_IMDB} \
     --model ${NET_FINAL} \
     --cfg experiments/cfgs/${NET}.yml \
     --net ${NET} \
-    --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} ${EXTRA_ARGS}
+    --conf ${CONF_THRESH} \
+    --iou ${IOU_THRESH} \
+    --set ANCHOR_SCALES ${ANCHORS} ANCHOR_RATIOS ${RATIOS} \
+          ${EXTRA_ARGS}
 fi
 

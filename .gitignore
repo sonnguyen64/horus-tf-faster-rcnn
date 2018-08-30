@@ -1,0 +1,6 @@
+data/*
+frozen_model*
+output/*
+tensorboard/*
+*.pyc
+*.so

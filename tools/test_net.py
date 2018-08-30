@@ -37,6 +37,12 @@ def parse_args():
   parser.add_argument('--num_dets', dest='max_per_image',
             help='max number of detections per image',
             default=100, type=int)
+  parser.add_argument('--conf', dest='conf_thresh',
+            help='confidence threshold',
+            default=0.6, type=float)
+  parser.add_argument('--iou', dest='iou_thresh',
+            help='iou threshold',
+            default=0.5, type=float)
   parser.add_argument('--tag', dest='tag',
                         help='tag of the model',
                         default='', type=str)
@@ -77,6 +83,8 @@ if __name__ == '__main__':
 
   tag = args.tag
   tag = tag if tag else 'default'
+  conf_thresh = args.conf_thresh
+  iou_thresh = args.iou_thresh
   filename = tag + '/' + filename
 
   imdb = get_imdb(args.imdb_name)
@@ -114,6 +122,6 @@ if __name__ == '__main__':
     sess.run(tf.global_variables_initializer())
     print('Loaded.')
 
-  test_net(sess, net, imdb, filename, max_per_image=args.max_per_image)
+  test_net(sess, net, imdb, filename, max_per_image=args.max_per_image, conf_thresh=conf_thresh, iou_thresh=iou_thresh)
 
   sess.close()

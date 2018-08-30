@@ -139,7 +139,7 @@ def apply_nms(all_boxes, thresh):
       nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
   return nms_boxes
 
-def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.05):
+def test_net(sess, net, imdb, weights_filename, max_per_image=100, conf_thresh=0.6, iou_thresh=0.5):
   np.random.seed(cfg.RNG_SEED)
   """Test a Fast R-CNN network on an image database."""
   num_images = len(imdb.image_index)
@@ -164,7 +164,7 @@ def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.05):
 
     # skip j = 0, because it's the background class
     for j in range(1, imdb.num_classes):
-      inds = np.where(scores[:, j] > thresh)[0]
+      inds = np.where(scores[:, j] > conf_thresh)[0]
       cls_scores = scores[inds, j]
       cls_boxes = boxes[inds, j*4:(j+1)*4]
       cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
@@ -193,5 +193,5 @@ def test_net(sess, net, imdb, weights_filename, max_per_image=100, thresh=0.05):
     pickle.dump(all_boxes, f, pickle.HIGHEST_PROTOCOL)
 
   print('Evaluating detections')
-  imdb.evaluate_detections(all_boxes, output_dir)
+  imdb.evaluate_detections(all_boxes, output_dir, iou_thresh=iou_thresh)
 
